@@ -8,201 +8,129 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
-using System.Drawing.Imaging;
 
-namespace Secret_Image_Builder
+
+namespace SecretImageDECODE
 {
     public partial class Form1 : Form
     {
-    
-        
         public Form1()
         {
             InitializeComponent();
-
-            textBox1.Enabled = false;
-            encodeP3Button.Enabled = false;
+            button1.Enabled = false;
         }
 
-        private Bitmap bmp;
-        
+       
         string format;
-        PPM ppmFile = new PPM();
+        int count = 0;
+        PPM2 ppmFile2 = new PPM2();
         
+
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            //Shows dialog box
             openFileDialog1.ShowDialog();
-        }  
-   
 
-        private void saveToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            saveFileDialog1.Filter = "PPM Files|*.ppm";
-
-
-            if (saveFileDialog1.ShowDialog() == DialogResult.OK)
-            {
-
-                if (format == "P3")
-                {
-                    //opens the file
-                    StreamWriter writer = new StreamWriter(saveFileDialog1.FileName);
-
-                    for (int x = 0; x < ppmFile.myData.Count; x++)
-                    {
-                        //Save normally
-                        writer.WriteLine(ppmFile.myData[x]);
-
-                    }
-                    //closes the file
-                    writer.Close();
-                }
-                else
-                {
-
-                    File.WriteAllBytes(saveFileDialog1.FileName, ppmFile.myBytes);
-                }
-
-            }
-             
+            openFileDialog1.Filter = "PPM Files|*.ppm";
         }
 
         private void openFileDialog1_FileOk(object sender, CancelEventArgs e)
         {
+            //Opens the files & reads it
+            //ppmFile2.LoadPPM(openFileDialog1.FileName);
             StreamReader file = new StreamReader(openFileDialog1.FileName);
 
             format = file.ReadLine();
-            
             file.Close();
             //Checks the format of the ppm file
-            if(format == "P3")//P3
+            if (format == "P3")//P3
             {
                 // Send filename to method
-                bmp = ppmFile.LoadPPMP3(openFileDialog1.FileName);
-
-                textBox1.Enabled = true;
+                ppmFile2.LoadPPM(openFileDialog1.FileName);
+                button1.Enabled = true;
             }
             else//P6
             {
                 //Sends filename to method
-                bmp = ppmFile.LoadPPMP6(openFileDialog1.FileName);
-
-                textBox1.Enabled = true;
+                 ppmFile2.LoadPPMP6(openFileDialog1.FileName);
+                button1.Enabled = true;
             }
 
-            //displays file as an image
-            pictureBox1.Image = bmp;
         }
-      
 
-        //Encode button 
         private void button1_Click(object sender, EventArgs e)
         {
-            int value;
-            
-            ppmFile.myList.Clear();
-           
-
-            if (format == "P6")
+            //Grabs user position
+            try
             {
-                ppmFile.position = (int.Parse(textBox3.Text) * 3) + ppmFile.startindex;
-                //Checks to see if the user position is greater than the PPM file length
+                ppmFile2.position = int.Parse(textBox2.Text);
+            
               
-            }
-            else
-            {
-                ppmFile.position = (int.Parse(textBox3.Text) * 3);
-                //Checks to see if the user position is greater than the PPM file length
-               
-            }
-            
+               int msg;
 
-            //Loops through the message and encodes
-            foreach (char c in textBox1.Text)
-            {
-                value = Convert.ToInt32(c);
+                if (format == "P3")
+                {
+                    ppmFile2.position = (ppmFile2.position * 3);
 
-                //stores the value
-                ppmFile.Encode(value, format);
-                
+                    /*starts at user position and increments by 3, checks if x is less than the file length*/
+                    for (int x = ppmFile2.position; x < ppmFile2.myData.Count; x += 3)
+                    {
+                        /*Reads the values of the List*/
+                        msg = Convert.ToInt32(ppmFile2.myData[x]);
 
-                //debugging.....shows encoded value
-                textBox2.Text = value.ToString();
+                        /*counts every character passed through*/
+                        count++;
+
+                        /*Checks to see if count is less that 255 and Checks to see if msg has a value of 37(%) - our break point*/
+                        if (count < 255 && msg != 37)
+                        {
+                            /*Prints out the message if there is not a break point*/
+                            textBox1.Text += (char)msg;
+                        }
+                        else
+                        {
+                            x = ppmFile2.myData.Count;
+                        }
+
+                    }
+
+                }
+                else
+                {
+                    ppmFile2.position = (ppmFile2.position * 3) + ppmFile2.startindex;
+
+                    for (int x = ppmFile2.position; x < ppmFile2.myBytes.Length; x += 3)
+                    {
+                        /*Reads the values of the List*/
+                        msg = Convert.ToInt32(ppmFile2.myBytes[x]);
+
+                        /*counts every character passed through*/
+                        count++;
+
+                        /*Checks to see if count is less that 255 or if msg has a value of 37(%) - our break point*/
+                        if (count < 255 && msg != 37)
+                        {
+                            /*Prints out the message if there is not a break point*/
+                            textBox1.Text += (char)msg;
+                        }
+                        else
+                        {
+                            x = ppmFile2.myBytes.Length;
+                        }
+
+                    }
+                }
             }
-            
-            
-            //Checks to see if the user followed instructions...
-            if (textBox2.Text != "37")
+            catch
+              
             {
-                MessageBox.Show("Please end message with a %");
-                textBox2.Clear();
-            }
-            else
-            {
-                MessageBox.Show("Encoded!");
-
+                MessageBox.Show("Numbers only!");
             }
 
         }
 
-      
-        private void button1_Click_1(object sender, EventArgs e)
-        {
-            int value;
+    }   
 
-            if (format == "P6")
-            {
-                ppmFile.position = (int.Parse(textBox3.Text) * 3) + ppmFile.startindex;
-                
+    
 
-                //Loops through the message and encodes
-                foreach (char c in textBox1.Text)
-                {
-                    value = Convert.ToInt32(c);
-
-                    if (ppmFile.position > ppmFile.myBytes.Length)
-                    {
-                        MessageBox.Show("Not a valid position, try a lower number.");
-                        break;
-                    }
-                     
-                    //stores the value
-                    ppmFile.Encode(value, format);
-                }
-
-                if (ppmFile.position < ppmFile.myBytes.Length)
-                {
-                    MessageBox.Show("Great position. Click ENCODE.");
-                    encodeP3Button.Enabled = true;
-
-                }
-
-            }
-            else
-            {
-                ppmFile.position = (int.Parse(textBox3.Text) * 3);
-                //Checks to see if the user position is greater than the PPM file length
-              //Loops through the message and encodes
-                foreach (char c in textBox1.Text)
-                {
-                    value = Convert.ToInt32(c);
-
-                    if (ppmFile.position > ppmFile.myData.Count)
-                    {
-                        MessageBox.Show("Not a valid position, try a lower number.");
-                        break;
-                    }
-                        //stores the value
-                        ppmFile.Encode(value, format);
-                }
-
-                if (ppmFile.position < ppmFile.myData.Count)
-                {
-                    MessageBox.Show("Great position. Click ENCODE.");
-                    encodeP3Button.Enabled = true;
-
-                }
-            }
-        }
-    }
 }
